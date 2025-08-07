@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 # 引数から環境設定
 SV_NAME="$1" # サーバー名
 SV_TYPE="$2" # サーバータイプ
@@ -33,7 +33,7 @@ echo "[DEBUG] サーバータイプ：$SV_TYPE"
 echo "[DEBUG] サーバーバージョン：$SV_VER"
 echo "[DEBUG] サーバーポート：$SV_PORT"
 
-if [ -d ${SV_DIR_PATH} ] then
+if [ -d ${SV_DIR_PATH} ]; then
     # ディレクトリが存在する
     mv ${SV_DIR_PATH} ${SV_ERROR_DIR_PATH}/SV-${SV_PORT}.${CURRENT_DATETIME}
 fi

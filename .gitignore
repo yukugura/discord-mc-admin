@@ -3,6 +3,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+private_key@minecraft-V2.pem
+
 # C extensions
 *.so
 

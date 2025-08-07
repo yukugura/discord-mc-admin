@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 from discord.ext import commands
+from ssh_utils import execute_remote_command
 import os
 import discord
-import paramiko
 import mysql.connector
 import asyncio
 
@@ -10,7 +10,7 @@ import asyncio
 load_dotenv()
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 DOMAIN_NAME = os.getenv("DOMAIN_NAME")
-ADMIN_PASS = os.getenv("ADMIN_PASS")
+ADMIN_KEY = os.getenv("ADMIN_KEY")
 SV_MAX_PORT = os.getenv("SV_MAX_PORT")
 SV_MIN_PORT = os.getenv("SV_MIN_PORT")
 DB_HOST = os.getenv("DB_HOST")
@@ -18,6 +18,12 @@ DB_NAME = os.getenv("DB_NAME")
 DB_PORT = os.getenv("DB_PORT")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
+SSH_HOST = os.getenv("SSH_HOST")
+SSH_PORT = os.getenv("SSH_PORT")
+SSH_USER = os.getenv("SSH_USER")
+SSH_PASS = os.getenv("SSH_PASS")
+SSH_KEY_PATH = os.getenv("SSH_KEY_PATH")
+TIMEOUT_SEC = int(os.getenv("TIMEOUT_SEC"))
 
 # Bot設定
 intents = discord.Intents.default()
@@ -111,7 +117,7 @@ class db_manager:
     # サーバー作成可能か確認する
     async def can_create_server(self, user_id):
         # ユーザーの現在の作成済みサーバー数を取得
-        current_sv_query = "SELECT COUNT(*) FROM servers WHERE dc_user_id = %s"
+        current_sv_query = "SELECT COUNT(*) FROM servers WHERE dc_user_id = %s and status IN ('running', 'creating')"
         current_sv = await self._execute_query(current_sv_query, (str(user_id),), fetchone=True)
         # ユーザーの作成可能サーバー数を取得
         max_sv_query = "SELECT max_sv FROM users INNER JOIN perm_limits ON users.perm_name = perm_limits.perm_name WHERE users.dc_user_id = %s"
@@ -124,8 +130,8 @@ class db_manager:
 
     # そのポートが空いているか、使用できるか確認する
     async def find_available_port(self, port_num):
-        query = "SELECT COUNT(*) FROM servers WHERE status IN ('running','creating') and sv_port = %s"
-        result = await self._execute_query(query, (port_num,), fetchone=True)
+        query = "SELECT sv_id FROM servers WHERE status IN ('running','creating','error') and sv_port = %s"
+        result = await self._execute_query(query, (port_num,), fetchall=True)
         if result:
             # データがある（使用中である場合）
             return False
@@ -140,8 +146,8 @@ class db_manager:
         return result[0] if result[0] else 0
 
     # サーバー作成をserversテーブルに登録
-    async def creating_server(self, user_id, sv_name, sv_type, sv_ver, sv_port):
-        creating_sv_query = """INSERT INTO server(
+    async def insert_creating_data(self, user_id, sv_name, sv_type, sv_ver, sv_port):
+        creating_sv_query = """INSERT INTO servers(
                                 dc_user_id,
                                 sv_name,
                                 sv_type,
@@ -151,6 +157,13 @@ class db_manager:
                             )VALUES (%s,%s,%s,%s,%s,%s)"""
         creating_sv_params = (user_id, sv_name, sv_type, sv_ver, sv_port, 'creating')
         return await self._execute_query(creating_sv_query, creating_sv_params, commit=True)
+    
+    # サーバーのステータスを更新する
+    async def update_server_status(self, dc_user_id, sv_name, status):
+        update_sv_query = """UPDATE servers SET status = %s 
+                            WHERE dc_user_id = %s AND sv_name = %s"""
+        update_sv_params = (status, dc_user_id, sv_name)
+        return await self._execute_query(update_sv_query, update_sv_params, commit=True)
 
     # ユーザーの権限を取得する
     async def get_user_permissions(self, user_id):
@@ -164,6 +177,54 @@ class db_manager:
             # ユーザーが存在しない場合
             return None
     
+    # ユーザーロールを変更する
+    async def update_user_permission(self, user_id, perm):
+        query = """UPDATE users
+                    SET perm_name = %s
+                    WHERE dc_user_id = %s"""
+        params = (perm, user_id)
+        return await self._execute_query(query, params, commit=True)
+
+    # ユーザーの最大サーバー作成数を取得する
+    async def can_create_max_servers(self, user_id):
+        max_sv_query = "SELECT max_sv FROM users INNER JOIN perm_limits ON users.perm_name = perm_limits.perm_name WHERE users.dc_user_id = %s"
+        max_sv = await self._execute_query(max_sv_query, (str(user_id),), fetchone=True)
+        return max_sv[0]
+
+    # 現在作成しているサーバーすべてを２次元で返す
+    async def get_active_user_servers(self, user_id, admin=False):
+        if not admin:
+            # adminじゃない時
+            active_query = "SELECT sv_name, sv_port FROM servers WHERE status = 'running' AND dc_user_id = %s"
+            active_params = (user_id,)
+        else:
+            # adminの時
+            active_query = "SELECT sv_name, sv_port FROM servers WHERE status = 'running'"
+            active_params = None
+        return await self._execute_query(active_query, active_params, fetchall=True)
+
+    # ユーザーがAdminかどうかの判定
+    async def check_is_admin(self, user_id):
+        check_query = "SELECT perm_name FROM users WHERE dc_user_id = %s AND perm_name = 'admin'"
+        check_params = (user_id,)
+        if await self._execute_query(check_query, check_params, fetchall=True):
+            # データがあればadmin確定
+            return True
+        else:
+            # データがない、つまりadminではない
+            return False
+
+    # サーバー名とdc_user_idで重複がないか調べる
+    async def check_server_name_duplicate(self, user_id, sv_name):
+        check_query = "SELECT * FROM servers WHERE dc_user_id = %s AND sv_name = %s"
+        check_params = (user_id, sv_name)
+        if await db_manager_instance._execute_query(check_query, check_params, fetchall=True):
+            # データが過去にある（重複あり）
+            return False
+        else:
+            # データが過去にない（重複なし）
+            return True
+        
     # SQLを実行する際のヘルパーメソッド
     async def _execute_query(self, query, params=None, fetchone=False, fetchall=False, commit=False):
         # データベース接続の確立を保証する
@@ -264,7 +325,7 @@ class db_manager:
 
 # サーバー作成確認のViewクラス
 class CreateServerView(discord.ui.View):
-    def __init__(self, original_discord_id, timeout=180):
+    def __init__(self, original_discord_id, timeout=TIMEOUT_SEC):
         super().__init__(timeout=timeout)
         self.original_user_id = original_discord_id
 
@@ -280,15 +341,14 @@ class CreateServerView(discord.ui.View):
     
     @discord.ui.button(label="いいえ", style=discord.ButtonStyle.secondary)
     async def no_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button): # いいえ押下時のコールバック
-        # キャンセルする処理
-        global creating_users
-        if self.original_user_id in creating_users: # 作成中から元の状態に戻す
-            print("[DEBUG] 排他変数から削除しました。")
-            creating_users.remove(self.original_user_id)
         # 本人か確認する処理
         if interaction.user.id != self.original_user_id:
             await interaction.response.send_message("コマンド実行者のみ操作可能です。", ephemeral=True)
             return
+        global creating_users
+        if self.original_user_id in creating_users: # 作成中から元の状態に戻す
+            print("[DEBUG] 排他変数から削除しました。")
+            creating_users.remove(self.original_user_id)
         await interaction.response.send_message("処理をキャンセルしました。",ephemeral=True)
         self.stop()
         return
@@ -306,7 +366,7 @@ class CreateServerView(discord.ui.View):
 # サーバーバージョンを選択するViewクラス
 class VersionSelectView(discord.ui.View):
     def __init__(self, interaction: discord.Interaction):
-        super().__init__(timeout=180)
+        super().__init__(timeout=TIMEOUT_SEC)
         self.original_user_id = interaction.user.id
         self.interaction = interaction
 
@@ -341,7 +401,7 @@ class VersionSelectView(discord.ui.View):
 # サーバータイプを選択するViewクラス
 class TypeSelectView(discord.ui.View):
     def __init__(self,selected_version ,interaction: discord.Interaction):
-        super().__init__(timeout=180)
+        super().__init__(timeout=TIMEOUT_SEC)
         self.original_user_id = interaction.user.id
         self.selected_version = selected_version
 
@@ -372,7 +432,7 @@ class TypeSelectView(discord.ui.View):
 # サーバー名を入力するモーダルクラス
 class ServerNameModal(discord.ui.Modal):
     def __init__(self, original_user_id: int, selected_type: str = None, selected_version: str = None):
-        super().__init__(title="サーバー名入力", timeout=180)  # タイムアウトを180秒に設定
+        super().__init__(title="サーバー名入力", timeout=TIMEOUT_SEC)  # タイムアウトを180秒に設定
         self.original_user_id = original_user_id
         self.selected_type = selected_type
         self.selected_version = selected_version
@@ -388,11 +448,69 @@ class ServerNameModal(discord.ui.Modal):
         self.add_item(self.server_name_input)
     # 送信後の処理
     async def on_submit(self, interaction: discord.Interaction):
-        server_name = self.server_name_input.value
-        # サーバー作成処理をここに追加
-        #await interaction.response.send_message(f"サーバー名 `{server_name}` を `{self.selected_type}` タイプで `{self.selected_version}` バージョンで作成しています...", ephemeral=True)
         await interaction.response.defer(ephemeral=True)
+        await interaction.followup.send(f"サーバー作成処理が進行中です。しばらくお待ちください・・・",ephemeral=True)
+        try:
+            #サーバー名に重複がないか確認
+            if not await db_manager_instance.check_server_name_duplicate(interaction.user.id, self.server_name_input.value):
+                await interaction.followup.send(f"サーバー名が**重複**しています。過去に使用したサーバー名は、利用できません。もう一度はじめからやり直してください。",ephemeral=True)
+                return 
+
+            # 空きポートを探す処理
+            available_port = None
+            for port in range(int(SV_MIN_PORT), int(SV_MAX_PORT) + 1):
+                if await db_manager_instance.find_available_port(port):
+                    # 空きポートが見つかった
+                    available_port = port
+                    break
+
+            # 一つも空きポートがなかったかどうかを判定
+            if available_port is None:
+                await interaction.followup.send("利用可能なポートが見つかりませんでした。処理を中断します。",ephemeral=True)
+                return
+            
+            # 空きポートが見つかったので status 'creating' で予約
+            await db_manager_instance.insert_creating_data(interaction.user.id, self.server_name_input.value, self.selected_type, self.selected_version, available_port)
+
+            # SSHしてスクリプトを実行
+            if await self._execute_create_server(available_port):
+                # 成功した場合
+                await db_manager_instance.update_server_status(interaction.user.id, self.server_name_input.value, 'running')
+                await interaction.followup.send(f"サーバー名：`{self.server_name_input.value}` タイプ：`{self.selected_type}` バージョン：`{self.selected_version}`でサーバーの作成に成功しました。\n接続用サーバーアドレス`sv{str(available_port)[-2:]}.{DOMAIN_NAME}`",ephemeral=True)
+            else:
+                # 失敗した場合
+                await db_manager_instance.update_server_status(interaction.user.id, self.server_name_input.value, 'error')
+                await interaction.followup.send(f"サーバーの作成に失敗しました。",ephemeral=True)
+
+        finally:
+            # 排他変数から削除
+            if self.original_user_id in creating_users:
+                print("[DEBUG] 排他変数から削除しました。")
+                creating_users.remove(self.original_user_id) # 作成中から元の状態に戻す
         return
+    
+    # SSH接続してサーバー作成スクリプトを実行する関数
+    async def _execute_create_server(self, sv_port):
+        sv_name = self.server_name_input.value
+        sv_type = self.selected_type
+        sv_ver = self.selected_version
+
+        # 実行したいコマンドを格納
+        cmd1 = f"/minecraft/scripts/CREATE-SERVER.sh \"{sv_name}\" \"{sv_type}\" \"{sv_ver}\" \"{sv_port}\""
+        cmd2 = f"sudo /minecraft/scripts/CREATE-SERVER-SUDO.sh \"{sv_name}\" \"{sv_type}\" \"{sv_ver}\" \"{sv_port}\""
+
+        # 実行
+        success1, _ = await execute_remote_command(SSH_HOST, SSH_PORT, SSH_USER, SSH_KEY_PATH, SSH_PASS, cmd1)
+        if not success1:
+            return False
+        
+        # 実行
+        success2, _ = await execute_remote_command(SSH_HOST, SSH_PORT, SSH_USER, SSH_KEY_PATH, SSH_PASS, cmd2)
+        if not success2:
+            return False
+        
+        # 問題なく実行できた場合は、Trueを返却
+        return True
     
     # タイムアウト時の処理
     async def on_timeout(self):
@@ -402,7 +520,163 @@ class ServerNameModal(discord.ui.Modal):
             print("[DEBUG] 排他変数から削除しました。")
             creating_users.remove(self.original_user_id) # 作成中から元の状態に戻す
         return await super().on_timeout()
+
+# サーバー削除ウィザードに進むかどうかのViewクラス
+class DeleteAgreeView(discord.ui.View):
+    def __init__(self, original_discord_id, servers):
+        super().__init__(timeout=TIMEOUT_SEC)
+        self.original_user_id = original_discord_id
+        self.servers = servers
+
+    # はいを押されたときのコールバック
+    @discord.ui.button(label="次へ", style=discord.ButtonStyle.danger)
+    async def yes_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button): # はい押下時のコールバック
+        # 本人か確認する処理
+        if interaction.user.id != self.original_user_id:
+            await interaction.response.send_message("コマンド実行者のみ操作可能です。", ephemeral=True)
+            return
+        self.stop()
+        await interaction.response.send_message("",view=DeleteServerView(self.servers),ephemeral=True)
     
+    # キャンセル押されたときのコールバック
+    @discord.ui.button(label="キャンセル", style=discord.ButtonStyle.secondary)
+    async def no_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button): # いいえ押下時のコールバック
+        # 本人か確認する処理
+        if interaction.user.id != self.original_user_id:
+            await interaction.response.send_message("コマンド実行者のみ操作可能です。", ephemeral=True)
+            return
+        await interaction.response.send_message("処理をキャンセルしました。",ephemeral=True)
+        self.stop()
+
+# 削除するサーバーを選択するViewクラス
+class DeleteServerView(discord.ui.View):
+    def __init__(self, servers):
+        super().__init__(timeout=TIMEOUT_SEC)
+        # リストを動的に作成
+        select_options = [discord.SelectOption(label=s[0], value=s[0]) for s in servers]
+        self.servers = servers
+
+        # selectオブジェクトを初期化
+        select = discord.ui.Select(
+            placeholder="一度削除すると二度とデータは戻りません。",
+            options = select_options
+        )
+        # コールバック関数を指定
+        select.callback = self.delete_server_callback
+        # Viewにselectオブジェクトを追加
+        self.add_item(select)
+
+    # プルダウンで削除する鯖を選択後
+    async def delete_server_callback(self, interaction: discord.Interaction):
+        self.stop()
+        await interaction.response.send_modal(DeleteConfirmModal(interaction.data["values"][0], self.servers))
+
+# サーバー名を入力するモーダルクラス
+class DeleteConfirmModal(discord.ui.Modal):
+    def __init__(self, original_sv_name, servers:list):
+        super().__init__(title="削除するサーバー名を入力", timeout=TIMEOUT_SEC)
+        self.sv_name = original_sv_name
+        self.sv_port = [s[1] for s in servers if s[0] == original_sv_name][0]
+        self.servers = servers # 念の為、いらないかも
+        print(f"[DEBUG] {self.sv_port}")
+        
+        # サーバー名入力フィールド
+        self.delete_server_name_input = discord.ui.TextInput(
+            label="一度削除すると二度とデータは戻りません。",
+            placeholder="例: MyMinecraftServer",
+            required=True,
+            max_length=64,  # 最大文字数を64に設定
+            custom_id="delete_server_name_input"
+        )
+        self.add_item(self.delete_server_name_input)
+
+    # 送信後の処理
+    async def on_submit(self, interaction: discord.Interaction):
+        # 入力間違いを判定
+        if self.delete_server_name_input.value == self.sv_name:
+            # 入力内容に間違いがなく削除を実行する場合
+            await interaction.response.defer(ephemeral=True) # 処理に時間がかかるため一旦defer
+            await interaction.followup.send(f"削除処理を実行中です。しばらくお待ちください・・・",ephemeral=True)
+            # スクリプトの実行が成功するか判断するif文
+            if await self._execute_delete_server():
+                # 成功した場合
+                await db_manager_instance.update_server_status(interaction.user.id, self.sv_name, 'deleting')
+                await interaction.followup.send(f"サーバー名：`{self.sv_name}`の削除が完了しました。",ephemeral=True)
+                return 
+            else:
+                # 失敗した場合
+                await db_manager_instance.update_server_status(interaction.user.id, self.sv_name, 'error')
+                await interaction.followup.send(f"サーバー名：`{self.sv_name}`の削除に失敗しました。管理者にお問い合わせください。",ephemeral=True)
+                return
+        # 入力内容が違う場合
+        else:
+            await interaction.response.send_message(f"入力内容に間違いがあるため、削除処理を中止します。\nもう一度はじめからやり直してください。", ephemeral=True)
+            return 
+
+    # SSH接続してサーバー作成スクリプトを実行する関数
+    async def _execute_delete_server(self):
+        # 実行したいコマンドを格納
+        cmd1 = f"sudo /minecraft/scripts/DELETE-SERVER-SUDO.sh \"{self.sv_port}\""
+        # 実行
+        success1, _ = await execute_remote_command(SSH_HOST, SSH_PORT, SSH_USER, SSH_KEY_PATH, SSH_PASS, cmd1)
+        if not success1:
+            return False
+        # 問題なく実行できた場合は、Trueを返却
+        return True
+
+# Adminロールに変更するためのキー入力Viewクラス
+class ChangeRoleAdminView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=TIMEOUT_SEC)
+        self.original_user_id = user_id
+
+    # はい（続行処理）
+    @discord.ui.button(label="はい", style=discord.ButtonStyle.danger)
+    async def yes_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button): # はい押下時のコールバック
+        # 本人か確認する処理
+        if interaction.user.id != self.original_user_id:
+            await interaction.response.send_message("コマンド実行者のみ操作可能です。", ephemeral=True)
+            return
+        self.stop()
+        await interaction.response.send_modal(ChangeRoleAdminModal())
+    
+    @discord.ui.button(label="いいえ", style=discord.ButtonStyle.secondary)
+    async def no_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button): # いいえ押下時のコールバック
+        # 本人か確認する処理
+        if interaction.user.id != self.original_user_id:
+            await interaction.response.send_message("コマンド実行者のみ操作可能です。", ephemeral=True)
+            return
+        await interaction.response.send_message("処理をキャンセルしました。",ephemeral=True)
+        self.stop()
+        return
+
+# Adminロールに変更するためのキー入力モーダル
+class ChangeRoleAdminModal(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="Adminパスワード入力フォーム", timeout=TIMEOUT_SEC)
+        
+        # パスフレーズ入力フォーム
+        self.admin_key_input = discord.ui.TextInput(
+            label="Admin認証キーを入力してください",
+            placeholder="例：password",
+            required=True,
+            max_length=64, # 最大文字数
+            custom_id="admin_key_input"
+        )
+        self.add_item(self.admin_key_input)
+
+    # 送信後の処理
+    async def on_submit(self, interaction: discord.Interaction):
+        if self.admin_key_input.value == ADMIN_KEY:
+            # 同じだった場合（認証成功）
+            if await db_manager_instance.update_user_permission(interaction.user.id, 'admin'): # adminに変更
+                max_sv_ct = await db_manager_instance.can_create_max_servers(interaction.user.id) # 最大サーバー作成数を取得
+                await interaction.response.send_message(f"ユーザー`{interaction.user.name}`のパーミッションを`admin`に更新しました。\n現在の最大サーバー作成数は、`{max_sv_ct}`です。",ephemeral=True)
+                return await super().on_submit(interaction)
+        # 違った場合（認証失敗）
+        await interaction.response.send_message(f"キーの認証に失敗しました。処理を中断します。",ephemeral=True)
+        return await super().on_submit(interaction)
+
 # Bot起動時処理
 @bot.event
 async def on_ready():
@@ -445,7 +719,26 @@ async def create_mc_sv(ctx: commands.Context):
             await ctx.send(f"`{ctx.author.name}`：サーバー作成上限に達しているか、現在作成中のサーバーが存在するため処理を中断します。")
     else:
         # 稼働できるサーバーの数に空きがない場合
-        await ctx.send(f"稼働出来るサーバー数に空きがありません。")    
+        await ctx.send(f"稼働出来るサーバー数に空きがありません。")
+
+# 現在立てているサーバーを削除するコマンド
+@bot.command()
+async def delete(ctx: commands.Context):
+    servers = await db_manager_instance.get_active_user_servers(ctx.author.id)
+    if not servers:
+        # サーバーがない場合
+        await ctx.send(f"現在稼働中のサーバーが見つかりませんでした。")
+        return
+    
+    # 稼働中サーバーが見つかった場合
+    await ctx.send(f"稼働中のサーバーが見つかりました。サーバー削除ウィザードに進みますか？", view=DeleteAgreeView(ctx.author.id, servers))
+
+# Adminロールにする処理
+@bot.command()
+async def admin(ctx: commands.Context):
+    await db_manager_instance.register_user(ctx.author.id, ctx.author.name) # ユーザーがない場合に登録
+    max_sv_ct = await db_manager_instance.can_create_max_servers(ctx.author.id) # 最大サーバー作成数を取得
+    await ctx.send(f"現在の最大サーバー作成数は、`{max_sv_ct}`です。\nAdminキーを入力することでロールの変更し、最大サーバー作成数を変更することが可能です。\nキー入力を行いますか？",view=ChangeRoleAdminView(ctx.author.id),ephemeral=True)
 
 # Bot実行
 bot.run(BOT_TOKEN)
