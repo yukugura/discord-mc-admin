@@ -27,6 +27,7 @@ CURRENT_DATETIME=$(date '+%Y-%m-%d_%H-%M-%S') # 実行時の日付
 # 設定ファイル
 SV_CONFIG_FILE_PATH="/minecraft/config"
 SV_SOURCE_FILE_PATH="/minecraft/${SV_TYPE}-source"
+VANILLACORD_PATH="${SV_SOURCE_FILE_PATH}/VanillaCord.jar"
 
 echo "[DEBUG] サーバー名：$SV_NAME"
 echo "[DEBUG] サーバータイプ：$SV_TYPE"
@@ -48,6 +49,13 @@ sed -i "s/server-port=.*/server-port=${SV_PORT}/" ${SV_DIR_PATH}/server.properti
 # eula.txtを対象ディレクトリにコピーするしてtrueにする処理
 cp ${SV_CONFIG_FILE_PATH}/eula.txt ${SV_DIR_PATH}/eula.txt
 sed -i "s/eula=.*/eula=true/" ${SV_DIR_PATH}/eula.txt
+
+# serverのjarが存在しない場合作成する
+if [ ! -f "${SV_SOURCE_FILE_PATH}/out/${SV_VER}.jar" ]; then
+    # ファイルが存在しない場合
+    cd "${SV_SOURCE_FILE_PATH}"
+    ${JDK21_PATH} -jar "${VANILLACORD_PATH}" ${SV_VER}
+fi
 
 # serverのjarファイルを対象ディレクトリにコピーして権限付与
 cp ${SV_SOURCE_FILE_PATH}/out/${SV_VER}.jar ${SV_DIR_PATH}/${SV_VER}.jar

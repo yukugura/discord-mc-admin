@@ -17,11 +17,12 @@ fi
 SV_PORT="$1" # ポート番号を取得
 SCREEN_NAME="SV-${SV_PORT}"
 SV_DIR_PATH="/minecraft/servers/${SCREEN_NAME}"
+SV_SERVICE_FILE_PATH="/etc/systemd/system"
 
 # ディレクトリがあるかどうか判定
 if [ -d ${SV_DIR_PATH} ]; then
   # サービスファイルが存在するか確認
-  if ! systemctl list-units --type=service | grep -q "^  ${SCREEN_NAME}.service"; then
+  if ! systemctl cat "${SCREEN_NAME}.service" &>/dev/null; then
     # 存在しない場合
     echo "[ERROR] サービスファイルが見つかりませんでした。処理を終了します。"
     exit 1
@@ -44,6 +45,11 @@ if [ -d ${SV_DIR_PATH} ]; then
   # サービスが停止したあと、ディレクトリの処理
   if ! rm -rf "${SV_DIR_PATH}"; then
     echo "[ERROR] サーバーディレクトリ ${SCREEN_NAME} の削除に失敗しました。"
+    exit 1
+  fi
+  # サービスファイルを削除する処理
+  if ! rm -rf "${SV_SERVICE_FILE_PATH}/${SCREEN_NAME}.service";then
+    echo "[ERROR] サービスファイル ${SCREEN_NAME}.service の削除に失敗しました。"
     exit 1
   fi
   echo "[INFO] 削除処理がすべて完了しました。"

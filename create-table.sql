@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS servers (
     sv_type VARCHAR(50) NOT NULL,
     sv_ver VARCHAR(20) NOT NULL,
     sv_port INT,
-    status ENUM('running', 'stopped', 'creating', 'deleting', 'error') DEFAULT 'stopped' NOT NULL,
+    status ENUM('running', 'stopped', 'creating', 'deleting','deleted', 'error') DEFAULT 'error' NOT NULL,
     sv_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (dc_user_id) REFERENCES users(dc_user_id) ON UPDATE CASCADE ON DELETE CASCADE,
     UNIQUE (dc_user_id, sv_name)
