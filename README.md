@@ -10,5 +10,5 @@ discord内でマインクラフトサーバーを管理します
 -   **VanillaCord.jar**:
     -   **開発元**: [https://github.com/ME1312/VanillaCord](https://github.com/ME1312/VanillaCord)
     -   **ライセンス**: Mozilla Public License, Version 2.0 (MPL-2.0)
-    -   **ライセンス全文**: [MPL-2.0.txtへのリンク]
+    -   **ライセンス全文**: [MPL-2.0.txtへのリンク](https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/assets/MPL-2.0.txt)
     -   **著作権**: © 2021-2023 ME1312
