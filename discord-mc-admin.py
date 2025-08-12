@@ -669,10 +669,10 @@ class GiveOpModal(discord.ui.Modal):
             if await self._execute_giveop_server():
                 await interaction.followup.send(f"サーバー **`{self.sv_name}`** でMCID **`{self.giveop_mcid_input}`** への権限付与が完了しました。",ephemeral=True)
             else:
-                await interaction.followup.send(f"サーバー **`{self.sv_name}`** への権限付与に失敗しました。管理者へお問い合わせください。",ephemeral=True)
+                await interaction.followup.send(f"サーバー **`{self.sv_name}`** への権限付与に失敗しました。\nサーバーが起動していない場合は、/control で該当のサーバーを起動してからもう一度行ってください。\nその他の場合、管理者へお問い合わせください。",ephemeral=True)
         else:
             # 問題あり
-            await interaction.response.send_message(f"MCID **`{self.giveop_mcid_input}`** は、使用できない文字が含まれています。",ephemeral=True)
+            await interaction.response.send_message(f"MCID **`{self.giveop_mcid_input}`** は、使用できない文字が含まれているか、MCIDの条件を満たしていません。",ephemeral=True)
 
     # SSH接続してサーバー作成スクリプトを実行する関数
     async def _execute_giveop_server(self):
