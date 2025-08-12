@@ -94,5 +94,5 @@ else
     echo "[INFO] 外部アクセスは無効のままです。" | tee -a "$LOG_FILE"
 fi
 
-echo "[INFO] セットアップが完了しました！" | tee -a "$LOG_FILE"
+echo "[INFO] すべてのセットアップが完了しました！" | tee -a "$LOG_FILE"
 echo "[INFO] セットアップログを ${LOG_FILE} に格納しました。"
