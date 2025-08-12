@@ -172,7 +172,8 @@ echo "[INFO] Step 6: 権限と所有者の設定が完了しました。" | tee 
 
 echo "[INFO] Step 7: UFW（ファイアウォール）の設定を行います。" | tee -a "$LOG_FILE"
 
-APP_CONFIG_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/dc_mc_admin"
-
+APP_CONFIG_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/dc-mc-admin"
+UFW_APP_DIR="/etc/ufw/applications.d"
+UFW_APP_NAME="dc"
 
 echo "[INFO] すべてのセットアップが完了しました。" | tee -a "$LOG_FILE"

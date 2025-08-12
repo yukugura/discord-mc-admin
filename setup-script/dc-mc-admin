@@ -1,4 +1,4 @@
-[dc_mc_admin]
+[dc-mc-admin]
 title=Discord-Minecraft-Administrator
 description=Minecraft server management by discord.py
 ports=25501:25510/tcp
