@@ -195,3 +195,4 @@ else
 fi
 
 echo "[INFO] すべてのセットアップが完了しました。" | tee -a "$LOG_FILE"
+echo "[INFO] セットアップログを ${LOG_FILE} に格納しました。"
