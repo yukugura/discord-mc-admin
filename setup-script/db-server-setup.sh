@@ -50,7 +50,7 @@ echo "[INFO] データベース '$DB_NAME' とユーザー '$DB_USER' を作成�
 echo "[INFO] Step 3: 必要なテーブルを作成します。" | tee -a "$LOG_FILE"
 
 # GitHubのURLからSQLファイルをダウンロード
-SQL_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/create-table.sql"
+SQL_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/assets/create-table.sql"
 SQL_FILE="/tmp/create-table.sql"
 
 echo "[INFO] SQLファイルをダウンロード中..." | tee -a "$LOG_FILE"

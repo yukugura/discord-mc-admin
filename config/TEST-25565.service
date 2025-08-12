@@ -1,0 +1,14 @@
+[Unit]
+Description=TEST-25565
+
+[Service]
+User=minecraft
+Group=minecraft
+WorkingDirectory=/minecraft/servers/TEST-25565
+ExecStart=/minecraft/servers/TEST-25565/start.sh
+ExecStop=/minecraft/servers/TEST-25565/stop.sh
+Type=forking
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -90,7 +90,20 @@ else
     echo "[INFO] ディレクトリが作成済みのため、次の処理に移行します。" | tee -a "$LOG_FILE"
 fi
 
-#
+# ==================================
+# マイクラサーバー設定ファイルをDL
+# ==================================
+echo "[INFO] Step 4: マイクラサーバーで使用する各種設定ファイルをダウンロードします。" | tee -a "$LOG_FILE"
+VANILLACORD_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/main/assets/VanillaCord.jar"
 
+
+
+if [ ! -f "${MC_VANILLA_DIR}/VanillaCord.jar" ]; then
+    echo "[INFO] ${MC_VANILLA_DIR} に VanillaCord.jar が見つかりませんでした。ダウンロードを開始します。" | tee -a "$LOG_FILE"
+    sudo curl -o "${MC_VANILLA_DIR}/VanillaCord.jar" "$VANILLACORD_URL"
+    echo "[INFO] VanillaCord.jar のダウンロードが完了しました。" | tee -a "$LOG_FILE"
+else
+    echo "[INFO] VanillaCord.jar は既に存在します。" | tee -a "$LOG_FILE"
+fi
 
 
