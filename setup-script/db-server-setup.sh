@@ -88,6 +88,7 @@ EOF
     
     # MySQLサービスを再起動
     sudo systemctl restart mariadb
+    sudo ufw allow 3306 | tee -a "$LOG_FILE"
     echo "[INFO] 外部からのDBアクセスが有効になりました。" | tee -a "$LOG_FILE"
 else
     echo "[INFO] 外部アクセスは無効のままです。" | tee -a "$LOG_FILE"

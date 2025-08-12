@@ -172,8 +172,26 @@ echo "[INFO] Step 6: 権限と所有者の設定が完了しました。" | tee 
 
 echo "[INFO] Step 7: UFW（ファイアウォール）の設定を行います。" | tee -a "$LOG_FILE"
 
-APP_CONFIG_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/dc-mc-admin"
+UFW_APP_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/dc-mc-admin"
 UFW_APP_DIR="/etc/ufw/applications.d"
-UFW_APP_NAME="dc"
+UFW_APP_NAME="dc-mc-admin"
+
+# UFWAPPファイルがあるか判定
+if [ ! -f "${UFW_APP_DIR}/${UFW_APP_NAME}" ]; then
+    echo "[INFO] ${UFW_APP_DIR} に ${UFW_APP_NAME} が見つかりませんでした。ダウンロードを開始します。" | tee -a "$LOG_FILE"
+    sudo curl -o "/tmp/${UFW_APP_NAME}" "$UFW_APP_URL"
+    sudo mv "/tmp/${UFW_APP_NAME}" "${UFW_APP_DIR}/${UFW_APP_NAME}"
+    echo "[INFO] ${UFW_APP_NAME} のダウンロードと移動が完了しました。" | tee -a "$LOG_FILE"
+
+    # ufw-appの適用
+    echo "[INFO] UFWアプリケーションプロファイルを登録し、ルールを適用します。" | tee -a "$LOG_FILE"
+    sudo ufw app update "${UFW_APP_NAME}" | tee -a "$LOG_FILE"
+    sudo ufw allow "${UFW_APP_NAME}" | tee -a "$LOG_FILE"
+    sudo ufw reload | tee -a "$LOG_FILE" | tee -a "$LOG_FILE"
+    echo "[INFO] UFW設定が更新されました。" | tee -a "$LOG_FILE"
+
+else
+    echo "[INFO] ${UFW_APP_NAME} は既に存在します。" | tee -a "$LOG_FILE"
+fi
 
 echo "[INFO] すべてのセットアップが完了しました。" | tee -a "$LOG_FILE"
