@@ -12,5 +12,5 @@ screen -p 0 -S ${SCREEN_NAME} -X eval 'stuff "say サーバー停止まで残り
 sleep 1s
 screen -p 0 -S ${SCREEN_NAME} -X eval 'stuff "kick @a Waiting for restart :)\015"'
 sleep 1s
-screen -p 0 -S ${SCREEN_NAME} -X eval 'stuff "stop \015"'
+screen -p 0 -S ${SCREEN_NAME} -X eval 'stuff "stop\015"'
 sleep 5s

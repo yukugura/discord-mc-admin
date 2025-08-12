@@ -329,6 +329,38 @@ class db_manager:
             self.cursor = None
             self.connection = None
 
+# サーバー作成時利用規約確認のViewクラス
+class LicenseAgreeView(discord.ui.View):
+    def __init__(self, interaction: discord.Interaction, timeout=TIMEOUT_SEC):
+        super().__init__(timeout=timeout)
+        self.original_user_id = interaction.user.id
+
+    # 引数の順序を (self, interaction, button) に変更
+    @discord.ui.button(label="同意", style=discord.ButtonStyle.danger)
+    async def yes_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button): # 同意押下時のコールバック
+        self.stop()
+        await interaction.response.send_message(f"**{DOMAIN_NAME}**でサーバーを作成します。\nサーバータイプを選択してください。",view=TypeSelectView(interaction),ephemeral=True)
+    
+    @discord.ui.button(label="いいえ", style=discord.ButtonStyle.secondary)
+    async def no_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button): # いいえ押下時のコールバック
+        global creating_users
+        if self.original_user_id in creating_users: # 作成中から元の状態に戻す
+            print("[DEBUG] 排他変数から削除しました。")
+            creating_users.remove(self.original_user_id)
+        await interaction.response.send_message("処理をキャンセルしました。",ephemeral=True)
+        self.stop()
+        return
+    
+    # タイムアウト時の処理
+    async def on_timeout(self):
+        # 排他変数から削除
+        global creating_users
+        if self.original_user_id in creating_users:
+            print("[DEBUG] 排他変数から削除しました。")
+            creating_users.remove(self.original_user_id) # 作成中から元の状態に戻す
+        self.stop()
+        return await super().on_timeout()
+
 # サーバータイプを選択するViewクラス
 class TypeSelectView(discord.ui.View):
     def __init__(self, interaction: discord.Interaction):
@@ -839,7 +871,7 @@ async def create_mc_sv(interaction: discord.Interaction):
         if await db_manager_instance.can_create_server(interaction.user.id) and (interaction.user.id not in creating_users): # ユーザーの作成資格の確認と排他変数にidがないか確認
             # 作成可能の場合
             creating_users.add(interaction.user.id)
-            await interaction.response.send_message(f"**{DOMAIN_NAME}**でサーバーを作成します。\nサーバータイプを選択してください。",view=TypeSelectView(interaction),ephemeral=True)
+            await interaction.response.send_message(f"⚠️ 注意: このコマンドを実行すると、MinecraftのEULA(https://aka.ms/MinecraftEULA) に同意したことになります。",view=LicenseAgreeView(interaction),ephemeral=True)
         else:
             # 作成不可の場合
             await interaction.response.send_message(f"`{interaction.user.name}`：サーバー作成上限に達しているか、現在作成中のサーバーが存在するため処理を中断します。",ephemeral=True)
@@ -924,7 +956,7 @@ async def status(interaction: discord.Interaction):
     perm_name = await db_manager_instance.get_user_permissions(interaction.user.id) # 権限名を取得
     max_sv = await db_manager_instance.can_create_max_servers(interaction.user.id) # 最大作成数を取得
     current_sv = len(servers) # 現在稼働中のサーバー数を取得
-    sv_cnt = 0 # サーバー数を数える変数
+    sv_cnt = 1 # サーバー数を数える変数
 
     # Embedメッセージを設定
     embed = discord.Embed(

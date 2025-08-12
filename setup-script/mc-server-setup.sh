@@ -94,16 +94,85 @@ fi
 # マイクラサーバー設定ファイルをDL
 # ==================================
 echo "[INFO] Step 4: マイクラサーバーで使用する各種設定ファイルをダウンロードします。" | tee -a "$LOG_FILE"
-VANILLACORD_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/main/assets/VanillaCord.jar"
+
+# ファイル名とURLのペアを配列に格納
+declare -A FILES=(
+    ["VanillaCord.jar"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/main/assets/VanillaCord.jar"
+    ["start.sh"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/start.sh"
+    ["stop.sh"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/stop.sh"
+    ["eula.txt"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/eula.txt"
+    ["server.properties"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/server.properties"
+    ["TEST-25565.service"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/TEST-25565.service"
+)
+
+# ループで各ファイルをダウンロード
+for FILENAME in "${!FILES[@]}"; do
+    URL="${FILES[$FILENAME]}"
+    # ファイルごとに保存先ディレクトリを振り分け
+    if [[ "$FILENAME" == "VanillaCord.jar" ]]; then
+        DEST_DIR="${MC_VANILLA_DIR}"
+    else
+        DEST_DIR="${MC_CONF_DIR}"
+    fi
+
+    if [ ! -f "${DEST_DIR}/${FILENAME}" ]; then
+        echo "[INFO] ${DEST_DIR} に ${FILENAME} が見つかりませんでした。ダウンロードを開始します。" | tee -a "$LOG_FILE"
+        sudo curl -o "${DEST_DIR}/${FILENAME}" "$URL"
+        echo "[INFO] ${FILENAME} のダウンロードが完了しました。" | tee -a "$LOG_FILE"
+    else
+        echo "[INFO] ${FILENAME} は既に存在します。" | tee -a "$LOG_FILE"
+    fi
+done
+
+echo "[INFO] Step 4: 完了しました。" | tee -a "$LOG_FILE"
+
+# ==================================
+# マイクラサーバー操作スクリプトのDL
+# ==================================
+echo "[INFO] Step 5: マイクラサーバーを操作するスクリプトをダウンロードします。" | tee -a "$LOG_FILE"
+
+# ファイル名とURLのペアを配列に格納
+declare -A FILES=(
+    ["CREATE-SERVER.sh"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/operation-script/CREATE-SERVER.sh"
+    ["CREATE-SERVER-SUDO.sh"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/operation-script/CREATE-SERVER-SUDO.sh"
+    ["DELETE-SERVER-SUDO.sh"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/operation-script/DELETE-SERVER-SUDO.sh"
+    ["CONTROL-SERVER-SUDO.sh"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/operation-script/CONTROL-SERVER-SUDO.sh"
+    ["GIVE-OP.sh"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/operation-script/GIVE-OP.sh"
+)
+
+# ループで各ファイルをダウンロード
+for FILENAME in "${!FILES[@]}"; do
+    URL="${FILES[$FILENAME]}"
+    # ファイルごとに保存先ディレクトリを振り分け
+    DEST_DIR="${MC_SH_DIR}"
+
+    if [ ! -f "${DEST_DIR}/${FILENAME}" ]; then
+        echo "[INFO] ${DEST_DIR} に ${FILENAME} が見つかりませんでした。ダウンロードを開始します。" | tee -a "$LOG_FILE"
+        sudo curl -o "${DEST_DIR}/${FILENAME}" "$URL"
+        echo "[INFO] ${FILENAME} のダウンロードが完了しました。" | tee -a "$LOG_FILE"
+    else
+        echo "[INFO] ${FILENAME} は既に存在します。" | tee -a "$LOG_FILE"
+    fi
+done
+echo "[INFO] Step 5: 完了しました。" | tee -a "$LOG_FILE"
+
+# ==================================
+# マイクラサーバー権限設定
+# ==================================
+
+echo "[INFO] Step 6: ${MC_DIR} 配下をすべて ${MC_USER} 所有にします。" | tee -a "$LOG_FILE"
+sudo chown -R "${MC_USER}:${MC_USER}" "${MC_DIR}"
+find "${MC_SH_DIR}" -name "*.sh" -exec sudo chmod 774 {} \;
+
+echo "[INFO] Step 6: 権限と所有者の設定が完了しました。" | tee -a "$LOG_FILE"
+
+# ==================================
+# マイクラサーバーUFWの設定
+# ==================================
+
+echo "[INFO] Step 7: UFW（ファイアウォール）の設定を行います。" | tee -a "$LOG_FILE"
+
+APP_CONFIG_URL="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/dc_mc_admin"
 
 
-
-if [ ! -f "${MC_VANILLA_DIR}/VanillaCord.jar" ]; then
-    echo "[INFO] ${MC_VANILLA_DIR} に VanillaCord.jar が見つかりませんでした。ダウンロードを開始します。" | tee -a "$LOG_FILE"
-    sudo curl -o "${MC_VANILLA_DIR}/VanillaCord.jar" "$VANILLACORD_URL"
-    echo "[INFO] VanillaCord.jar のダウンロードが完了しました。" | tee -a "$LOG_FILE"
-else
-    echo "[INFO] VanillaCord.jar は既に存在します。" | tee -a "$LOG_FILE"
-fi
-
-
+echo "[INFO] すべてのセットアップが完了しました。" | tee -a "$LOG_FILE"
