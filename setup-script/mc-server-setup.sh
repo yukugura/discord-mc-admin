@@ -194,5 +194,22 @@ else
     echo "[INFO] ${UFW_APP_NAME} は既に存在します。" | tee -a "$LOG_FILE"
 fi
 
+# sudoersに追記する処理
+SUDOERS_FILE="/etc/sudoers.d/discord-mc-admin"
+SUDOERS_CONTENT="${MC_USER} ALL=(ALL) NOPASSWD: /minecraft/scripts/CREATE-SERVER-SUDO.sh, /minecraft/scripts/DELETE-SERVER-SUDO.sh, /minecraft/scripts/CONTROL-SERVER-SUDO.sh"
+echo "[INFO] sudoers.dに権限設定ファイルを作成します。" | tee -a "$LOG_FILE"
+
+if [ -f "$SUDOERS_FILE" ]; then
+    echo "警告: 権限設定ファイル $SUDOERS_FILE は既に存在します。スキップします。" | tee -a "$LOG_FILE"
+else
+    # ファイル書き込み権限があるかどうか判定
+    if [ ! -w "/etc/sudoers.d/" ]; then
+        echo "[ERROR] /etc/sudoers.d/ に書き込み権限がありません。" | tee -a "$LOG_FILE"
+        exit 1
+    fi
+    echo "$SUDOERS_CONTENT" | sudo tee "$SUDOERS_FILE" > /dev/null
+    sudo chmod 440 "$SUDOERS_FILE"
+fi
+
 echo "[INFO] すべてのセットアップが完了しました。" | tee -a "$LOG_FILE"
 echo "[INFO] セットアップログを ${LOG_FILE} に格納しました。"
