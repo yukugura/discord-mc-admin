@@ -6,7 +6,29 @@ discord内でマインクラフトサーバーを管理します
 
 ・github：https://github.com/yukugura/discord-mc-admin/releases/
 
-# 環境設定
+# 動作環境
+### サーバー機
+
+<details>  
+    
+- マイクラ鯖
+    -    OS：Ubuntu 24.04.2 LTS
+    -    CPU：16c
+    -    RAM：16GB
+    -    USER：minecraft
+- Discordボット鯖
+    -    OS：Ubuntu 24.04.2 LTS
+    -    CPU：4c
+    -    RAM：4GB
+    -    USER：任意
+- DB鯖
+    -    OS：Ubuntu 24.04.2 LTS
+    -    CPU：4c
+    -    RAM：4GB
+    -    USER：任意
+</details>
+
+
 
 ### Pythonライブラリ
 -   python-dotenv: 1.1.1
@@ -14,12 +36,20 @@ discord内でマインクラフトサーバーを管理します
 -   paramiko: 3.5.1
 -   mysql-connector-python: 9.1.0
 
+### 今回公開する「discord-mc-admin」では、以下の構成で運用することを前提としています。
+-   プラン１：サーバーA（discordボット起動）、サーバーB（マイクラサーバー）、サーバーC（データベースサーバー）
+-   プラン２：サーバーA（discordボット起動）、サーバーB（マイクラサーバー・データベースサーバー）
+-   プラン３：サーバーA（discordボット起動・データベースサーバー）、サーバーB（マイクラサーバー）
 
+プラン１、２、３に共通してマイクラサーバーは、discordボットからSSHアクセスするための管理用ユーザーが必要です。  
+初期だと「minecraft」ユーザーを使用する設定の為、マイクラサーバーとするPCに「minecraft」ユーザーを予め作成しておく必要があります。
+公開鍵を使用してSSH接続する際は、.envファイルに秘密鍵のフルパスを記述する必要があります。※パスワードログインの場合は、「」
 
+# How to use
 
-## 手順 １ [.envファイルの初期設定]
-プロジェクトを実行するには、環境変数の設定が必要です。
-`.env.sample`ファイルをコピーし、`.env`という名前で保存してください。
+<details>
+<summary>手順 １ [.envファイルの初期設定]</summary>
+プロジェクトを実行するには、環境変数の設定が必要です。`.env.sample`ファイルをコピーし、`.env`という名前で保存してください。  
 
 `DISCORD_BOT_TOKEN="TOKEN-HERE"`  
 Discord-Developper-Portalから取得したBotのトークンを `TOKEN-HERE` に貼り付けてください。
@@ -52,10 +82,15 @@ Discord-Developper-Portalから取得したBotのトークンを `TOKEN-HERE` �
 実際にマインクラフトサーバーを稼働させるサーバーへSSH接続するための情報を記載します。  ここ（SSH_USER）を変更した場合は、[mc-server-setup.sh](https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/mc-server-setup.sh) の設定情報を変更する必要があります。
 
 `TIMEOUT_SEC="120"`  
-/create や /delete などのユーザーが使用するコマンドのタイムアウト時間を一括で設定します。  
+/create や /delete などのユーザーが使用するコマンドのタイムアウト時間を一括で設定します。    
+</details> 
 
-## 手順 ２ [データベース・サーバーのセットアップ]
-DBサーバーを構築するセットアップスクリプト db-server-setup.sh を wget 等でリポジトリからダウンロードします。
+
+
+<details>
+<summary>手順 ２ [データベース・サーバーのセットアップ]</summary>  
+    
+DBサーバーを構築するセットアップスクリプト db-server-setup.sh を wget 等でリポジトリからダウンロードします。  
 ```
 wget https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/db-server-setup.sh
 ```
@@ -70,9 +105,14 @@ sudo ./db-server-setup.sh
 ```
 スクリプトの途中で外部からDBサーバーにアクセスするかどうかを問われます。DiscordボットとDBサーバーが別の場合、外部アクセスの設定が必要になります。「y」を入力して処理を進めてください。  
 `[Q/A ] DBに外部からアクセスを許可しますか？ (y/N): `  
+</details>
 
-## 手順 ３ [マインクラフト・サーバーのセットアップ]
-実際にマインクラフトサーバーが稼働するサーバーのセットアップスクリプト mc-server-setup.sh を wget 等でリポジトリからダウンロードします。
+
+
+<details>
+<summary>手順 ３ [マインクラフト・サーバーのセットアップ]</summary>
+    
+実際にマインクラフトサーバーが稼働するサーバーのセットアップスクリプト mc-server-setup.sh を wget 等でリポジトリからダウンロードします。  
 ```
 wget https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/setup-script/mc-server-setup.sh
 ```
@@ -90,7 +130,29 @@ sudo ./mc-server-setup.sh
 
 もし別のユーザーを管理用ユーザーとして指定する場合、.envファイルに設定したSSH情報の各種設定項目を変更する必要があります。  
 `[Q/A ] 代わりに、どの既存sudoユーザーを管理用に使用しますか？：`
+</details>
 
+
+
+<details>
+<summary>手順 ４ [ボット・サーバーのセットアップ]</summary>
+
+Pythonインストール後、ライブラリをインストールします。仮想環境での運用をおすすめします。  
+```
+pip install python-dotenv
+```  
+```
+pip install discord.py
+```  
+```
+pip install paramiko
+```  
+```
+pip install mysql-connector-python
+```  
+
+その後、 discord-mc-admin.py を実行してください。
+</details>
 
 
 ## 外部ソフトウェアの利用について
