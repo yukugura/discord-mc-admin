@@ -26,6 +26,11 @@ discord内でマインクラフトサーバーを管理します
     -    CPU：4c
     -    RAM：4GB
     -    USER：任意
+- RP鯖
+    -    OS：Ubuntu 24.04.2 LTS
+    -    CPU：4c
+    -    RAM：4GB
+    -    USER：任意
 </details>
 
 
