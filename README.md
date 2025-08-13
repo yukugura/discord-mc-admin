@@ -52,7 +52,7 @@ discord内でマインクラフトサーバーを管理します
 初期だと「minecraft」ユーザーを使用して設定を行う為、マイクラサーバーとするPCに
 「minecraft」ユーザーを予め作成しておく必要があります。接続には、公開鍵方式を使用してください。
 
-# How to use
+# How to setup
 
 <details>
 <summary>手順 １ [.envファイルの初期設定]</summary>
