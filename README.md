@@ -36,14 +36,16 @@ discord内でマインクラフトサーバーを管理します
 -   paramiko: 3.5.1
 -   mysql-connector-python: 9.1.0
 
-### 今回公開する「discord-mc-admin」では、以下の構成で運用することを前提としています。
--   プラン１：サーバーA（discordボット起動）、サーバーB（マイクラサーバー）、サーバーC（データベースサーバー）
--   プラン２：サーバーA（discordボット起動）、サーバーB（マイクラサーバー・データベースサーバー）
--   プラン３：サーバーA（discordボット起動・データベースサーバー）、サーバーB（マイクラサーバー）
+### 今回公開する「discord-mc-admin」でのサーバー構成例
+-   プラン１：サーバーA（discordボット起動）、サーバーB（マイクラサーバー）、サーバーC（DBサーバー）、サーバーD（MCRPサーバー）
+-   プラン２：サーバーA（discordボット起動）、サーバーB（マイクラサーバー・DBサーバー）、サーバーC（MCRPサーバー）
+-   プラン３：サーバーA（discordボット起動・DBサーバー）、サーバーB（マイクラサーバー）、サーバーC（MCRPサーバー）
+-   etc
 
-プラン１、２、３に共通してマイクラサーバーは、discordボットからSSHアクセスするための管理用ユーザーが必要です。  
-初期だと「minecraft」ユーザーを使用する設定の為、マイクラサーバーとするPCに「minecraft」ユーザーを予め作成しておく必要があります。
-公開鍵を使用してSSH接続する際は、.envファイルに秘密鍵のフルパスを記述する必要があります。※パスワードログインの場合は、「」
+プランすべてに共通してマイクラサーバーは、discordボットからSSHアクセスするための管理用ユーザーが必要です。  
+※discordボット鯖とマイクラ鯖が別であれば好きな構成で問題ありません。  
+初期だと「minecraft」ユーザーを使用して設定を行う為、マイクラサーバーとするPCに
+「minecraft」ユーザーを予め作成しておく必要があります。接続には、公開鍵方式を使用してください。
 
 # How to use
 
@@ -153,6 +155,79 @@ pip install mysql-connector-python
 
 その後、 discord-mc-admin.py を実行してください。
 </details>
+
+
+
+<details>
+<summary>手順 ５ [RP・サーバーのセットアップ]</summary>
+
+サブドメインでのアクセスを想定しているため、RPサーバーを構築します。
+今回は、無難に [BungeeCord](https://github.com/SpigotMC/BungeeCord/) を使用しました。
+※ここでは、使用方法は説明しません。
+サブドメインアクセス用に**DNS設定**を予め済ませておいてください。  
+
+config.ymlの forced_hosts: に追記します。
+```
+  forced_hosts:
+    sv01.example.com: sv01
+    sv02.example.com: sv02
+    sv03.example.com: sv03
+    sv04.example.com: sv04
+    sv05.example.com: sv05
+    sv06.example.com: sv06
+    sv07.example.com: sv07
+    sv08.example.com: sv08
+    sv09.example.com: sv09
+    sv10.example.com: sv10
+```
+
+次に、サーバーを追加します。同じく config.yml の servers セクションを編集します。  
+マイクラサーバーのIPが「192.168.100.202」だった場合以下のように記述します。
+```
+servers:
+  sv01:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25501
+    restricted: false
+  sv02:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25502
+    restricted: false
+  sv03:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25503
+    restricted: false
+  sv04:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25504
+    restricted: false
+  sv05:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25505
+    restricted: false
+  sv06:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25506
+    restricted: false
+  sv07:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25507
+    restricted: false
+  sv08:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25508
+    restricted: false
+  sv09:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25509
+    restricted: false
+  sv10:
+    motd: Discord-Minecraft-Admin
+    address: 192.168.100.202:25510
+    restricted: false
+```
+</details>
+
 
 
 ## 外部ソフトウェアの利用について
