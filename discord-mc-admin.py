@@ -402,7 +402,8 @@ class VersionSelectView(discord.ui.View):
     @discord.ui.select(
         placeholder="バージョンを選択してください",
         options=[
-            discord.SelectOption(label="1.21.9 最新", value="1.21.9"),
+            discord.SelectOption(label="1.21.10 最新", value="1.21.10"),
+            discord.SelectOption(label="1.21.9", value="1.21.9"),
             discord.SelectOption(label="1.21.8", value="1.21.8"),
             discord.SelectOption(label="1.21.7", value="1.21.7"),
             discord.SelectOption(label="1.21.6", value="1.21.6"),
