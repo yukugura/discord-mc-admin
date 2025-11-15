@@ -71,12 +71,13 @@ MC_SH_DIR="${MC_DIR}/scripts"
 MC_CONF_DIR="${MC_DIR}/config"
 MC_ERROR_DIR="${MC_DIR}/error"
 MC_VANILLA_DIR="${MC_DIR}/vanilla-source"
+MC_PAPER_DIR="${MC_DIR}/paper-source"
 
 # 対象ディレクトリが存在するかどうか
 if [ ! -d "${MC_DIR}" ]; then
     # 存在しない場合
     echo "[INFO] ディレクトリ ${MC_DIR} を作成します。" | tee -a "$LOG_FILE"
-    sudo mkdir -p "${MC_DIR}" "${MC_SV_DIR}" "${MC_SH_DIR}" "${MC_CONF_DIR}" "${MC_ERROR_DIR}" "${MC_VANILLA_DIR}"
+    sudo mkdir -p "${MC_DIR}" "${MC_SV_DIR}" "${MC_SH_DIR}" "${MC_CONF_DIR}" "${MC_ERROR_DIR}" "${MC_VANILLA_DIR}" "${MC_PAPER_DIR}/out"
     echo "[INFO] ディレクトリ構成が作成されました。" | tee -a "$LOG_FILE"
 else
     # 存在する場合
@@ -103,6 +104,7 @@ declare -A FILES=(
     ["eula.txt"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/eula.txt"
     ["server.properties"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/server.properties"
     ["TEST-25565.service"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/TEST-25565.service"
+    ["spigot.yml"]="https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/config/spigot.yml"
 )
 
 # ループで各ファイルをダウンロード
