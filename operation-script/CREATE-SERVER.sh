@@ -5,9 +5,10 @@ SV_NAME="$1" # サーバー名
 SV_TYPE="$2" # サーバータイプ
 SV_VER="$3" # サーバーバージョン
 SV_PORT="$4" # サーバーポート番号
+DL_URL="$5" # ダウンロードURL
 
 # 引数のエラーを判定
-if [ "$#" -ne 4 ]; then
+if [ "$#" -ne 5 ]; then
     echo "エラー：引数の数が正しくありません。" >&2
     echo "使用法：$0 <サーバー名> <サーバータイプ> <サーバーバージョン> <サーバーポート番号>" >&2
     exit 1
@@ -41,20 +42,56 @@ fi
 # ディレクトリが存在しない = ディレクトリを新規で作成できる
 mkdir ${SV_DIR_PATH}
 
-# server.propertiesをconfigディレクトリから対象ディレクトリにコピーする
-cp ${SV_CONFIG_FILE_PATH}/server.properties ${SV_DIR_PATH}/server.properties
-# server.propertiesのserver-portを対象の番号を変更
-sed -i "s/server-port=.*/server-port=${SV_PORT}/" ${SV_DIR_PATH}/server.properties
+# sv_typeによって処理を変更
+if [ "${SV_TYPE}" == "vanilla" ]; then
+    
+    # server.propertiesをconfigディレクトリから対象ディレクトリにコピーする
+    cp ${SV_CONFIG_FILE_PATH}/server.properties ${SV_DIR_PATH}/server.properties
+    # server.propertiesのserver-portを対象の番号を変更
+    sed -i "s/server-port=.*/server-port=${SV_PORT}/" ${SV_DIR_PATH}/server.properties
 
-# eula.txtを対象ディレクトリにコピーするしてtrueにする処理
-cp ${SV_CONFIG_FILE_PATH}/eula.txt ${SV_DIR_PATH}/eula.txt
-sed -i "s/eula=.*/eula=true/" ${SV_DIR_PATH}/eula.txt
+    # eula.txtを対象ディレクトリにコピーするしてtrueにする処理
+    cp ${SV_CONFIG_FILE_PATH}/eula.txt ${SV_DIR_PATH}/eula.txt
+    sed -i "s/eula=.*/eula=true/" ${SV_DIR_PATH}/eula.txt
 
-# serverのjarが存在しない場合作成する
-if [ ! -f "${SV_SOURCE_FILE_PATH}/out/${SV_VER}.jar" ]; then
-    # ファイルが存在しない場合
-    cd "${SV_SOURCE_FILE_PATH}"
-    ${JDK21_PATH} -jar "${VANILLACORD_PATH}" ${SV_VER}
+    # serverのjarが存在しない場合作成する
+    if [ ! -f "${SV_SOURCE_FILE_PATH}/out/${SV_VER}.jar" ]; then
+        # ファイルが存在しない場合
+        cd "${SV_SOURCE_FILE_PATH}"
+        ${JDK21_PATH} -jar "${VANILLACORD_PATH}" ${SV_VER}
+    fi
+
+elif [ "${SV_TYPE}" == "paper" ]; then
+
+    # server.propertiesをconfigディレクトリから対象ディレクトリにコピーする
+    cp ${SV_CONFIG_FILE_PATH}/server.properties ${SV_DIR_PATH}/server.properties
+    # server.propertiesのserver-portを対象の番号を変更
+    sed -i "s/server-port=.*/server-port=${SV_PORT}/" ${SV_DIR_PATH}/server.properties
+
+    # eula.txtを対象ディレクトリにコピーするしてtrueにする処理
+    cp ${SV_CONFIG_FILE_PATH}/eula.txt ${SV_DIR_PATH}/eula.txt
+    sed -i "s/eula=.*/eula=true/" ${SV_DIR_PATH}/eula.txt
+
+    # spigot.ymlをconfigディレクトリから対象ディレクトリにコピーする
+    cp ${SV_CONFIG_FILE_PATH}/spigot.yml ${SV_DIR_PATH}/spigot.yml
+    # sed -i "s/bungeecord: false/bungeecord: true/" ${SV_DIR_PATH}/spigot.yml
+
+    # serverのjarが存在しない場合作成する
+    if [ ! -f "${SV_SOURCE_FILE_PATH}/out/${SV_VER}.jar" ]; then
+        # ファイルが存在しない場合
+        cd "${SV_SOURCE_FILE_PATH}/out"
+        wget -O ${SV_VER}.jar ${DL_URL}
+    fi
+    
+elif [ "${SV_TYPE}" == "spigot" ]; then
+    exit 1
+elif [ "${SV_TYPE}" == "forge" ]; then
+    exit 1
+elif [ "${SV_TYPE}" == "fabric" ]; then
+    exit 1
+else
+    echo "エラー：不明なサーバータイプです。" >&2
+    exit 1
 fi
 
 # serverのjarファイルを対象ディレクトリにコピーして権限付与

@@ -28,3 +28,13 @@ CREATE TABLE IF NOT EXISTS servers (
     FOREIGN KEY (dc_user_id) REFERENCES users(dc_user_id) ON UPDATE CASCADE ON DELETE CASCADE,
     UNIQUE (dc_user_id, sv_name)
 );
+
+CREATE TABLE IF NOT EXISTS server_versions(
+    sv_ver_id INT AUTO_INCREMENT PRIMARY KEY,
+    sv_type VARCHAR(50) NOT NULL,
+    sv_ver VARCHAR(20) NOT NULL,
+    build_ver INT NOT NULL DEFAULT 1,
+    download_url VARCHAR(255) NOT NULL DEFAULT '1',
+    is_supported BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (sv_type, sv_ver, build_ver)
+);

@@ -230,7 +230,19 @@ class db_manager:
         else:
             # データが過去にない（重複なし）
             return True
-        
+
+    # 利用可能なサーバーバージョンを取得する
+    async def get_available_versions(self, sv_type):
+        query = "SELECT t1.sv_ver FROM server_versions t1 INNER JOIN (SELECT sv_ver,MAX(build_ver) AS latest_build FROM server_versions WHERE sv_type = %s AND is_supported = TRUE GROUP BY sv_ver) t2 ON t1.sv_ver = t2.sv_ver AND t1.build_ver = t2.latest_build WHERE  t1.sv_type = %s AND t1.is_supported = TRUE ORDER BY t1.sv_ver DESC;"
+        params = (sv_type,sv_type,)
+        return await self._execute_query(query, params, fetchall=True)
+
+    # サーバーバージョンのダウンロードURLを取得する
+    async def get_download_url(self, sv_type, sv_ver):
+        query = "SELECT download_url FROM server_versions WHERE sv_type = %s AND sv_ver = %s AND is_supported = TRUE ORDER BY build_ver DESC LIMIT 1"
+        params = (sv_type,sv_ver,)
+        return await self._execute_query(query, params, fetchone=True)
+
     # SQLを実行する際のヘルパーメソッド
     async def _execute_query(self, query, params=None, fetchone=False, fetchall=False, commit=False):
         # データベース接続の確立を保証する
@@ -373,14 +385,15 @@ class TypeSelectView(discord.ui.View):
             discord.SelectOption(label="Vanilla", value="vanilla"),
             #discord.SelectOption(label="Forge", value="forge"),
             #discord.SelectOption(label="Spigot", value="spigot"),
-            #discord.SelectOption(label="Paper", value="paper"),
+            discord.SelectOption(label="Paper", value="paper"),
         ]
     )
     # プルダウンメニュー選択後の処理
     async def type_select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
         self.selected_type = select.values[0]
         self.stop()
-        await interaction.response.send_message("バージョンを選択してください。",view=VersionSelectView(self.selected_type, interaction), ephemeral=True)
+        versions = await db_manager_instance.get_available_versions(self.selected_type)
+        await interaction.response.send_message("バージョンを選択してください。",view=VersionSelectView(self.selected_type, interaction, versions), ephemeral=True)
 
     # タイムアウト時の処理
     async def on_timeout(self):
@@ -393,33 +406,30 @@ class TypeSelectView(discord.ui.View):
 
 # サーバーバージョンを選択するViewクラス
 class VersionSelectView(discord.ui.View):
-    def __init__(self, selected_type, interaction: discord.Interaction):
+    def __init__(self, selected_type, interaction: discord.Interaction, versions: list):
         super().__init__(timeout=TIMEOUT_SEC)
         self.original_user_id = interaction.user.id
         self.interaction = interaction
         self.selected_type = selected_type
+        
+        # リストを動的に作成
+        select_options = [discord.SelectOption(label=s[0], value=s[0]) for s in versions]
+        self.versions = versions
 
-    @discord.ui.select(
-        placeholder="バージョンを選択してください",
-        options=[
-            discord.SelectOption(label="1.21.10 最新", value="1.21.10"),
-            discord.SelectOption(label="1.21.9", value="1.21.9"),
-            discord.SelectOption(label="1.21.8", value="1.21.8"),
-            discord.SelectOption(label="1.21.7", value="1.21.7"),
-            discord.SelectOption(label="1.21.6", value="1.21.6"),
-            discord.SelectOption(label="1.21.5", value="1.21.5"),
-            discord.SelectOption(label="1.21.4", value="1.21.4"),
-            discord.SelectOption(label="1.21.3", value="1.21.3"),
-            discord.SelectOption(label="1.21.2", value="1.21.2"),
-            discord.SelectOption(label="1.21.1", value="1.21.1")
-        ]
-    )
+        # selectオブジェクトを初期化
+        select = discord.ui.Select(
+            placeholder="バージョンを選択してください",
+            options = select_options
+        )
+        # コールバック関数を指定
+        select.callback = self.version_select_callback
+        # Viewにselectオブジェクトを追加
+        self.add_item(select)
+    
     # プルダウン選択後の処理
-    async def version_select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
-        self.selected_version = select.values[0]
+    async def version_select_callback(self, interaction: discord.Interaction):
         self.stop()
-        #await interaction.response.send_message(f"",view=TypeSelectView(self.selected_version, interaction), ephemeral=True)
-        await interaction.response.send_modal(ServerNameModal(interaction.user.id, self.selected_type, self.selected_version))
+        await interaction.response.send_modal(ServerNameModal(interaction.user.id, self.selected_type, interaction.data['values'][0]))
     
     # タイムアウト時の処理
     async def on_timeout(self):
@@ -433,7 +443,7 @@ class VersionSelectView(discord.ui.View):
 # サーバー名を入力するモーダルクラス
 class ServerNameModal(discord.ui.Modal):
     def __init__(self, original_user_id: int, selected_type: str = None, selected_version: str = None):
-        super().__init__(title="サーバー名入力", timeout=TIMEOUT_SEC)  # タイムアウトを180秒に設定
+        super().__init__(title="サーバー名入力", timeout=TIMEOUT_SEC)
         self.original_user_id = original_user_id
         self.selected_type = selected_type
         self.selected_version = selected_version
@@ -472,6 +482,8 @@ class ServerNameModal(discord.ui.Modal):
             # 空きポートが見つかったので status 'creating' で予約
             await db_manager_instance.insert_creating_data(interaction.user.id, self.server_name_input.value, self.selected_type, self.selected_version, available_port)
 
+            # download_urlを取得
+            self.download_url = await db_manager_instance.get_download_url(self.selected_type, self.selected_version)
             # SSHしてスクリプトを実行
             if await self._execute_create_server(available_port):
                 # 成功した場合
@@ -496,8 +508,8 @@ class ServerNameModal(discord.ui.Modal):
         sv_ver = self.selected_version
 
         # 実行したいコマンドを格納
-        cmd1 = f"/minecraft/scripts/CREATE-SERVER.sh \"{sv_name}\" \"{sv_type}\" \"{sv_ver}\" \"{sv_port}\""
-        cmd2 = f"sudo /minecraft/scripts/CREATE-SERVER-SUDO.sh \"{sv_name}\" \"{sv_type}\" \"{sv_ver}\" \"{sv_port}\""
+        cmd1 = f"/minecraft/scripts/CREATE-SERVER.sh \"{sv_name}\" \"{sv_type}\" \"{sv_ver}\" \"{sv_port}\" \"{self.download_url}\""
+        cmd2 = f"sudo /minecraft/scripts/CREATE-SERVER-SUDO.sh \"{sv_name}\" \"{sv_type}\" \"{sv_ver}\" \"{sv_port}\" \"{self.download_url}\""
 
         # 実行
         success1, _ = await execute_remote_command(SSH_HOST, SSH_PORT, SSH_USER, SSH_KEY_PATH, SSH_PASS, cmd1)
