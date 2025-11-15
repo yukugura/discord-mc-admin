@@ -255,3 +255,9 @@ servers:
     -   **ライセンス**: Mozilla Public License, Version 2.0 (MPL-2.0)
     -   **ライセンス全文**: [MPL-2.0.txtへのリンク](https://raw.githubusercontent.com/yukugura/discord-mc-admin/refs/heads/main/assets/MPL-2.0.txt)
     -   **著作権**: © 2021-2023 ME1312
+
+-   **Paper Server Software**:
+    -   **開発元**: [PaperMC](https://github.com/PaperMC))
+    -   **ライセンス**: GNU General Public License version 3 (GPL-3.0) and MIT License
+    -   **ライセンス全文**: [https://github.com/PaperMC/Paper/blob/main/LICENSE.md](https://raw.githubusercontent.com/PaperMC/Paper/refs/heads/main/LICENSE.md)
+    -   **著作権**: © 2014-2023 PaperMC and contributors
