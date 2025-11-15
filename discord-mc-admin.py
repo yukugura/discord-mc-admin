@@ -38,43 +38,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 creating_users = set() # セットで現在サーバー作成中のユーザーを格納
 controlling_users = set() # セットで現在サーバーを操作中のユーザーを格納
 
-"""
-# MySQLDB接続関数
-def get_db_connection():
-    try:
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS,
-            port=int(DB_PORT)
-        )
-        if connection.is_connected():
-            print("MySQLデータベースに接続しました。")
-            return connection
-    except mysql.connector.Error as e:
-        print(f"MySQLデータベース接続エラー：{e}")
-        return None
-    
-# MySQLDBへの接続を担保
-async def ensure_db_connection():
-    global db_connection, db_cursor
-    if db_connection and db_connection.is_connected():
-        return db_connection
-    new_connection = get_db_connection()
-    if new_connection:
-        db_connection = new_connection
-        print("[DEBUG] 新しくDB接続を確立しました。ensure_db_connection()")
-        if db_cursor:
-            try: db_cursor.close()
-            except mysql.connector.Error as e: print(f"カーソルのクローズエラー：{e}")
-        db_cursor = db_connection.cursor()
-    else:
-        print("DB接続エラー：get_db_connectionがNoneを返しました。")
-        return None
-    return db_connection
-"""
-
 # DB操作をまとめたクラス
 class db_manager:
     # インスタンス生成時に実行
@@ -233,7 +196,7 @@ class db_manager:
 
     # 利用可能なサーバーバージョンを取得する
     async def get_available_versions(self, sv_type):
-        query = "SELECT t1.sv_ver FROM server_versions t1 INNER JOIN (SELECT sv_ver,MAX(build_ver) AS latest_build FROM server_versions WHERE sv_type = %s AND is_supported = TRUE GROUP BY sv_ver) t2 ON t1.sv_ver = t2.sv_ver AND t1.build_ver = t2.latest_build WHERE  t1.sv_type = %s AND t1.is_supported = TRUE ORDER BY t1.sv_ver DESC;"
+        query = "SELECT t1.sv_ver FROM server_versions t1 INNER JOIN (SELECT sv_ver, MAX(build_ver) AS latest_build FROM server_versions WHERE sv_type = %s AND is_supported = TRUE GROUP BY sv_ver) AS t2  ON t1.sv_ver = t2.sv_ver AND t1.build_ver = t2.latest_build WHERE t1.sv_type = %s AND t1.is_supported = TRUE ORDER BY CAST(SUBSTRING_INDEX(t1.sv_ver, '.', 2) AS CHAR) DESC,CAST(SUBSTRING_INDEX(t1.sv_ver, '.', -1) AS UNSIGNED) DESC LIMIT 25;"
         params = (sv_type,sv_type,)
         return await self._execute_query(query, params, fetchall=True)
 
@@ -483,7 +446,8 @@ class ServerNameModal(discord.ui.Modal):
             await db_manager_instance.insert_creating_data(interaction.user.id, self.server_name_input.value, self.selected_type, self.selected_version, available_port)
 
             # download_urlを取得
-            self.download_url = await db_manager_instance.get_download_url(self.selected_type, self.selected_version)
+            download_url = await db_manager_instance.get_download_url(self.selected_type, self.selected_version)
+            self.download_url = download_url[0] if download_url else "1"
             # SSHしてスクリプトを実行
             if await self._execute_create_server(available_port):
                 # 成功した場合
