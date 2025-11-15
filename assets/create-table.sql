@@ -44,16 +44,16 @@ INSERT IGNORE INTO server_versions (sv_type, sv_ver, is_supported) VALUES
 ('vanilla', '1.21.9', FALSE),
 ('vanilla', '1.21.8', TRUE),
 ('vanilla', '1.21.7', TRUE),
-('vanilla', '1.21.6', TRUE);
-('vanilla', '1.21.5', TRUE);
-('vanilla', '1.21.4', TRUE);
-('vanilla', '1.21.3', TRUE);
-('vanilla', '1.21.2', TRUE);
-('vanilla', '1.20.6', TRUE);
-('vanilla', '1.20.5', TRUE);
-('vanilla', '1.20.4', TRUE);
-('vanilla', '1.20.3', TRUE);
-('vanilla', '1.20.2', TRUE);
+('vanilla', '1.21.6', TRUE),
+('vanilla', '1.21.5', TRUE),
+('vanilla', '1.21.4', TRUE),
+('vanilla', '1.21.3', TRUE),
+('vanilla', '1.21.2', TRUE),
+('vanilla', '1.20.6', TRUE),
+('vanilla', '1.20.5', TRUE),
+('vanilla', '1.20.4', TRUE),
+('vanilla', '1.20.3', TRUE),
+('vanilla', '1.20.2', TRUE),
 ('vanilla', '1.20.1', TRUE);
 
 INSERT IGNORE INTO server_versions (sv_type, sv_ver, build_ver, download_url, is_supported) VALUES
