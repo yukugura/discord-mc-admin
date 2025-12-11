@@ -9,7 +9,7 @@ DL_URL="$5" # ダウンロードURL
 
 # 引数のエラーを判定
 if [ "$#" -ne 5 ]; then
-    echo "エラー：引数の数が正しくありません。" >&2
+    echo "[ERROR]：引数の数が正しくありません。" >&2
     echo "使用法：$0 <サーバー名> <サーバータイプ> <サーバーバージョン> <サーバーポート番号> <ダウンロードURL>" >&2
     exit 1
 fi
@@ -90,7 +90,7 @@ elif [ "${SV_TYPE}" == "forge" ]; then
 elif [ "${SV_TYPE}" == "fabric" ]; then
     exit 1
 else
-    echo "エラー：不明なサーバータイプです。" >&2
+    echo "[ERROR]：不明なサーバータイプです。" >&2
     exit 1
 fi
 
