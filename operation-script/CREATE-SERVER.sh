@@ -15,7 +15,36 @@ if [ "$#" -ne 5 ]; then
 fi
 
 # コマンドのフルパスを記載
+JDK8_PATH="/usr/lib/jvm/java-8-openjdk-amd64/bin/java"
+JDK17_PATH="/usr/lib/jvm/java-17-openjdk-amd64/bin/java"
 JDK21_PATH="/usr/lib/jvm/java-21-openjdk-amd64/bin/java"
+JDK25_PATH="/usr/lib/jvm/java-25-openjdk-amd64/bin/java"
+
+# まず、第1フィールドを取得
+FIRST_FIELD=$(echo "$SV_VER" | cut -d. -f1)
+
+if [ "$FIRST_FIELD" -ge 26 ]; then
+    # ==========================================
+    # 26以上のグループ
+    # ==========================================
+    JDK_PATH="${JDK25_PATH}"
+else
+    # ==========================================
+    # 26未満（従来の 1.x.x など）のグループ
+    # ==========================================
+    # 第2フィールドを取得（1.21.1なら21を取り出す）
+    SECOND_FIELD=$(echo "$SV_VER" | cut -d. -f2)
+
+    if [ "$SECOND_FIELD" -ge 21 ]; then
+        JDK_PATH="${JDK21_PATH}"
+    elif [ "$SECOND_FIELD" -ge 18 ]; then
+        JDK_PATH="${JDK17_PATH}"
+    else
+        # 1.16以前など
+        JDK_PATH="${JDK8_PATH}"
+    fi
+fi
+
 SCREEN_PATH="/usr/bin/screen"
 
 XMX_MEM="1024M"

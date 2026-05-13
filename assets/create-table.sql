@@ -62,4 +62,5 @@ INSERT IGNORE INTO server_versions (sv_type, sv_ver, build_ver, download_url, is
 ('paper', '1.21.10', 108, 'https://fill-data.papermc.io/v1/objects/2c825ddbe47897db1efbf1adfef0dbcfee7ebab2f959168cf59a654f3bdd0b36/paper-1.21.10-108.jar', TRUE),
 ('paper', '1.21.8', 60, 'https://fill-data.papermc.io/v1/objects/8de7c52c3b02403503d16fac58003f1efef7dd7a0256786843927fa92ee57f1e/paper-1.21.8-60.jar', TRUE),
 ('paper', '1.21.11', 38, 'https://fill-data.papermc.io/v1/objects/7c16d3931f725a575aa6caa3e537d0ccc962e1413644f9bb31f885fc3d6a9a98/paper-1.21.11-38.jar', TRUE),
-('paper', '1.21.11', 92, 'https://fill-data.papermc.io/v1/objects/f3f6bb1f913bd977da65edaec79ec94ced7c7971352d8630eddf782d6af0f03c/paper-1.21.11-92.jar', TRUE);
+('paper', '1.21.11', 92, 'https://fill-data.papermc.io/v1/objects/f3f6bb1f913bd977da65edaec79ec94ced7c7971352d8630eddf782d6af0f03c/paper-1.21.11-92.jar', TRUE),
+('paper', '26.1.2', 63, 'https://fill-data.papermc.io/v1/objects/b51d49a5f62446b7cfc01e6c29e48e0ce6abd35a783134aace1047b839b178ef/paper-26.1.2-63.jar', TRUE);
