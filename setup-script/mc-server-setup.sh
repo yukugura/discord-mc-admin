@@ -18,7 +18,10 @@ LOG_FILE="/var/log/mc-server-setup.log"
 # ==================================
 echo "[INFO] Step 1: パッケージの更新と Openjdk21 のインストールを開始します。" | tee -a "$LOG_FILE"
 sudo apt-get update -y | tee -a "$LOG_FILE"
+sudo apt-get install -y openjdk-8-jdk | tee -a "$LOG_FILE"
+sudo apt-get install -y openjdk-17-jdk | tee -a "$LOG_FILE"
 sudo apt-get install -y openjdk-21-jdk | tee -a "$LOG_FILE"
+sudo apt-get install -y openjdk-25-jdk | tee -a "$LOG_FILE"
 echo "[INFO] パッケージのインストールが完了しました。" | tee -a "$LOG_FILE"
 
 # ==================================
