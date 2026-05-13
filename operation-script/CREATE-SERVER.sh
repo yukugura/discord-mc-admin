@@ -87,7 +87,7 @@ if [ "${SV_TYPE}" == "vanilla" ]; then
     if [ ! -f "${SV_SOURCE_FILE_PATH}/out/${SV_VER}.jar" ]; then
         # ファイルが存在しない場合
         cd "${SV_SOURCE_FILE_PATH}"
-        ${JDK21_PATH} -jar "${VANILLACORD_PATH}" ${SV_VER}
+        ${JDK_PATH} -jar "${VANILLACORD_PATH}" ${SV_VER}
     fi
 
 elif [ "${SV_TYPE}" == "paper" ]; then
@@ -129,7 +129,7 @@ chmod 754 ${SV_DIR_PATH}/${SV_VER}.jar
 
 # start.shを作成＆内容書き込み＆権限付与
 echo "#!/bin/bash" > ${SV_DIR_PATH}/start.sh
-echo "${SCREEN_PATH} -AdmSU ${SCREEN_NAME} ${JDK21_PATH} -Xmx${XMX_MEM} -Xms${XMS_MEM} -jar ${SV_DIR_PATH}/${SV_VER}.jar nogui" >> ${SV_DIR_PATH}/start.sh
+echo "${SCREEN_PATH} -AdmSU ${SCREEN_NAME} ${JDK_PATH} -Xmx${XMX_MEM} -Xms${XMS_MEM} -jar ${SV_DIR_PATH}/${SV_VER}.jar nogui" >> ${SV_DIR_PATH}/start.sh
 chmod 754 ${SV_DIR_PATH}/start.sh
 
 # stop.shをコピー＆内容書き換え＆権限付与
